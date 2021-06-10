@@ -110,7 +110,7 @@ public:
         return true;
     }
     operator bool() const {
-        return m_minimizer_callback_base_ptr != nullptr
+        return m_minimizer_callback_base_ptr != nullptr;
     }
 
 private:

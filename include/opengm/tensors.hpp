@@ -141,14 +141,11 @@ namespace detail{
 
 
 
-    
-
-
-
-
-
     template<class T>
     class XArrayTensor;
+
+    template<class T, std::size_t NUM_LABELS>
+    class StaticNumLabelTensor;
 
     template<class T>
     class TensorBase{
@@ -184,6 +181,10 @@ namespace detail{
             gsl::span<const label_type> labels
         )const = 0;
 
+        // convert to a tensor with only binary labels but higher
+        // arity.
+        // undefined for tensors which are already binary
+        virtual std::unique_ptr<TensorBase<T>> binarize()const = 0;
     };
 
 
@@ -244,6 +245,7 @@ namespace detail{
             }
             return this->derived_cast()[labels_begin];
         }
+
         template<class ... ARGS, typename  = meta::all_integral<ARGS...>>
         value_type operator()(ARGS && ... args)const{
 
@@ -358,6 +360,19 @@ namespace detail{
             return tensor;
         }
 
+        std::unique_ptr<TensorBase<T>> binarize()const override{
+            const auto & derived = this->derived_cast();
+            const auto arity = derived.arity();
+
+            auto new_arity = std::size_t(0);
+            for(auto i=0; i<arity; ++i)
+            {
+                new_arity +=  static_cast<std::size_t>(std::ceil(std::log2(derived.shape(i))));
+            }
+
+            auto binary_tensor = std::make_unique<StaticNumLabelTensor<value_type, 2>>(new_arity);
+            return std::move(binary_tensor);
+        }
 
     };
 

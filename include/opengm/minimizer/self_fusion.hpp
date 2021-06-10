@@ -113,7 +113,6 @@ public:
         m_label_fuser(gm, label_fuser_settings_type{settings.fuse_minimizer_factory}),
         m_energy(),
         m_labels(gm.num_variables(),0),
-        m_outer_callback(nullptr),
         m_starting_point_passed(false),
         m_first(true)
     {
