@@ -1,0 +1,8 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/include
+
+Name: opengm
+Description: opengm is a modern C++ library
+Version: @opengm_VERSION@
+Cflags: -I${includedir}
