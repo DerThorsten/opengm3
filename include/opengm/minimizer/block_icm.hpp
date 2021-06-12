@@ -39,12 +39,41 @@ using BlockGeneratorFactory = detail::FromGmFactory<
     typename block_generator_type::gm_type,
     typename block_generator_type::settings_type
 >;
-// template<class GM>
-// class BlockGeneratorFactoryBase{
-// public:
-//     using gm_type = GM;
-//     std::unique_ptr<GM>
-// };
+
+
+
+template<class GM>
+class SingleVarBlockGenerator : public BlockGeneratorBase<GM>
+{
+public:
+    using gm_type = GM;
+    using block_icm_type = BlockIcm<GM>;
+    using variables_set_type = std::set<std::size_t>;
+
+    struct settings_type {
+    };
+
+    SingleVarBlockGenerator(const gm_type & gm, const settings_type settings = settings_type())
+    :   m_gm(gm),
+        m_settings(settings)
+    {
+
+    }
+
+    bool generate(block_icm_type * block_icm) override
+    {
+        std::size_t some_var = 0;
+        bool improved = block_icm->solve_submodel(&some_var, &some_var+1);
+        return false;
+    }
+private:
+    const gm_type & m_gm;
+    settings_type m_settings;
+};
+
+
+
+
 
 
 template<class GM>
@@ -69,21 +98,30 @@ public:
     using sub_minimizer_factory_ptr_type = std::shared_ptr<sub_minimizer_factory_base_type>;
 
 
+    using block_generator_factory_base_type = BlockGeneratorFactoryBase<gm_type>;
+    using block_generator_factory_ptr_type = std::shared_ptr<block_generator_factory_base_type>;
+
     using base_type::minimize;
 
 
     struct settings_type : public SolverSettingsBase{
         public:
             sub_minimizer_factory_ptr_type minimizer_factory;
-            //value_type eps{1e-7};
+            block_generator_factory_ptr_type block_generator_factory;
     };
 
 
     BlockIcm(const GM & gm, const settings_type & settings = settings_type())
     :   m_gm(gm),
+        m_settings(settings),
         m_labels(gm.num_variables(),0),
-        m_energy(m_gm.evaluate(m_labels))
+        m_energy(m_gm.evaluate(m_labels)),
+        m_builder(m_gm)
     {
+        if(! m_settings.block_generator_factory )
+        {
+            m_settings.block_generator_factory = std::make_shared<BlockGeneratorFactory<SingleVarBlockGenerator<gm_type>>>();
+        }
     }
 
     std::string name() const override{
@@ -118,16 +156,30 @@ public:
     void minimize(minimizer_callback_base_ptr_type minimizer_callback_base_ptr)override{
         auto callback = callback_wrapper(this, minimizer_callback_base_ptr);
 
+        auto block_gen = m_settings.block_generator_factory->create(m_gm);
+        while(block_gen->generate(this)){
+        }
         m_energy = m_gm.evaluate(m_labels);
 
+    }
+
+    template<class VI_ITER>
+    bool solve_submodel(VI_ITER free_vi_begin, VI_ITER free_vi_end)
+    {
+        std::cout<<"solve the submodel\n";
+        m_builder.condition(free_vi_begin, free_vi_end, m_labels, [](auto && sub_gm){
+
+        });
+        return false;
     }
 private:
 
 
     const GM & m_gm;
+    settings_type m_settings;
     std::vector<label_type> m_labels;
     value_type m_energy;
-
+    conditioned_submodel_builder_type m_builder;
 };
 
 template<class GM>
