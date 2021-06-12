@@ -6,6 +6,7 @@
 
 #include "opengm/minimizer/minimizer_base.hpp"
 #include "opengm/arity_vector.hpp"
+#include "opengm/factors_of_variables.hpp"
 
 namespace opengm{
 

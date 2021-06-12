@@ -37,6 +37,7 @@ set(${PROJECT_NAME}_TESTS
     test_label_fuser.cpp
     test_conditioned_submodel.cpp
     test_minimizer.cpp
+    test_block_icm.cpp
 )
 
 add_executable( ${${PROJECT_NAME}_TEST_TARGET}

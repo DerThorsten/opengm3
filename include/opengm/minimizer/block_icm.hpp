@@ -6,6 +6,10 @@
 #include "opengm/minimizer/utils/conditioned_submodel.hpp"
 #include "opengm/minimizer/minimizer_base.hpp"
 #include "opengm/minimizer/utils/conditioned_submodel.hpp"
+#include "opengm/from_gm_factory.hpp"
+
+#include "opengm/minimizer/factor_icm.hpp"
+
 
 namespace opengm{
 
@@ -24,7 +28,17 @@ public:
 
 };
 
+template<class gm_type>
+using BlockGeneratorFactoryBase = detail::FromGmFactoryBase<BlockGeneratorBase<gm_type>, gm_type>;
 
+
+template<class block_generator_type>
+using BlockGeneratorFactory = detail::FromGmFactory<
+    block_generator_type,
+    BlockGeneratorBase<typename block_generator_type::gm_type>,
+    typename block_generator_type::gm_type,
+    typename block_generator_type::settings_type
+>;
 // template<class GM>
 // class BlockGeneratorFactoryBase{
 // public:
