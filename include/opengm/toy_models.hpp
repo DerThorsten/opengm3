@@ -88,7 +88,6 @@ namespace detail{
                     }
                 }
             }
-            //std::cout<<"seed "<<m_seed<<"\n";
             return gm;
         }
 
@@ -174,7 +173,7 @@ namespace detail{
         {
 
         }
-
+        std::string name()const{return "RandomModel";}
         auto seed(){
             return m_seed;
         }
@@ -207,6 +206,9 @@ namespace detail{
                 // build random indices
                 std::shuffle(vis.begin(), vis.end(), generator);
 
+                std::vector<std::size_t> fac_vis( vis.begin(), vis.begin() + arity);
+                std::sort(fac_vis.begin(), fac_vis.end());
+
                 // tensor shape
                 std::vector<label_type> factor_shape(arity);
                 for(auto d=0; d<arity; ++d)
@@ -216,10 +218,10 @@ namespace detail{
 
                 // tensor with random values
                 auto tensor =  std::make_unique<XArrayTensor<value_type>>(
-                    xt::random::rand(factor_shape, -1.0, 1.0)
+                    xt::eval(xt::random::rand(factor_shape, 0.0, 1.0))
                 );
 
-                gm.add_factor(std::move(tensor), vis.begin(), vis.begin() + arity);
+                gm.add_factor(std::move(tensor), fac_vis.begin(), fac_vis.begin() + arity);
             }
 
 
@@ -233,6 +235,96 @@ namespace detail{
         std::size_t m_max_num_labels;
         std::size_t m_min_arity;
         std::size_t m_max_arity;
+        std::size_t m_seed;
+    };
+
+
+
+
+    template<class T = float>
+    class HigherOrderChain{
+
+    public:
+
+        using value_type = T;
+        using value_ilist = std::initializer_list<value_type>;
+        using label_type = std::size_t;
+        using space_type = opengm::UniformSpace<label_type>;
+        using GmType = opengm::GraphicalModel<space_type, value_type>;
+
+
+        HigherOrderChain(
+            std::size_t n_var,
+            label_type num_labels,
+            std::size_t arity,
+            std::size_t seed = 42
+        )
+        :   m_n_var(n_var),
+            m_n_labels(num_labels),
+            m_arity(arity),
+            m_seed(seed)
+        {
+
+        }
+        std::string name()const{return "HigherOrderChain";}
+        auto seed(){
+            return m_seed;
+        }
+        auto operator()(){
+
+            xt::random::seed(m_seed);
+            std::default_random_engine generator(m_seed);
+            ++m_seed;
+
+
+            // gm
+            GmType gm(m_n_var, m_n_labels);
+
+            // all indices
+            std::vector<std::size_t> vis(m_arity);
+
+            // tensor shape
+            std::vector<label_type> factor_shape(m_arity, m_n_labels);
+
+            std::vector<label_type> unary_shape(1, m_n_labels);
+
+            // add unary factors
+            for(auto var=0; var<m_n_var; ++var)
+            {
+
+                // tensor with random values
+                auto tensor =  std::make_unique<XArrayTensor<value_type>>(
+                    xt::eval(xt::random::rand(unary_shape, 0.0, 1.0))
+                );
+
+                gm.add_unary_factor(std::move(tensor), var);
+            }
+
+            // add higher order factors
+            for(auto var=0; var<m_n_var - m_arity -1; ++var)
+            {
+
+                for(auto i=0; i<m_arity; ++i)
+                {
+                    vis[i] = var + i;
+                }
+
+                // tensor with random values
+                auto tensor =  std::make_unique<XArrayTensor<value_type>>(
+                    xt::eval(xt::random::rand(factor_shape, 0.0, 1.0))
+                );
+
+                gm.add_factor(std::move(tensor), vis.begin(), vis.end());
+            }
+
+
+
+            return gm;
+        }
+
+        std::size_t m_n_var;
+        label_type m_n_labels;
+        std::size_t m_arity;
         std::size_t m_seed;
     };
 

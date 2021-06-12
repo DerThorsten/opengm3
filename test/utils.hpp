@@ -60,7 +60,11 @@ namespace condition
             const auto [opt_labels,opt_energy] = solve_brute_force(gm);
             if(best_labels != opt_labels)
             {
-                CHECK_MESSAGE(best_energy <= opt_energy, "minimizer did not yield optimal results");
+                std::stringstream ss;
+                ss <<"minimizer did not yield optimal results\n";
+                ss<<"BEST    "<<best_labels<<"\n";
+                ss<<"OPTIMAL "<<opt_labels<<"\n";
+                CHECK_MESSAGE(best_energy <= opt_energy, ss.str().c_str());
             }
         };
     };

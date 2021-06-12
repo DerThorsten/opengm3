@@ -110,7 +110,7 @@ namespace detail
                     }
                 }
             }
-            std::cout<<tree_vars.size()<<"\n";
+            //std::cout<<tree_vars.size()<<"\n";
         }
     private:
         const gm_type & m_gm;

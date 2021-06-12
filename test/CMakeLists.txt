@@ -33,7 +33,6 @@ set(${PROJECT_NAME}_TESTS
     test_tensors.cpp
     test_space.cpp
     test_graphical_model.cpp
-    test_to_quadratic.cpp
     test_utils.cpp
     test_label_fuser.cpp
     test_conditioned_submodel.cpp

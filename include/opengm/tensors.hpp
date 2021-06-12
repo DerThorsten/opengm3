@@ -363,14 +363,58 @@ namespace detail{
         std::unique_ptr<TensorBase<T>> binarize()const override{
             const auto & derived = this->derived_cast();
             const auto arity = derived.arity();
+            const auto shape =  derived.shape();
 
-            auto new_arity = std::size_t(0);
+            // how many binary variables are needed for
+            // each of the variables
+            arity_vector<std::size_t> num_binary_var(arity);
+
+            // cumsum of num_binary_var st offset[0] == 0
+            arity_vector<std::size_t> offset(arity, 0);
+
+            // compute entries of `num_binary_var` and `offset`
+            // and the actual arity of the binary tensor
+            auto binary_arity = std::size_t(0);
             for(auto i=0; i<arity; ++i)
             {
-                new_arity +=  static_cast<std::size_t>(std::ceil(std::log2(derived.shape(i))));
+                offset[i] = binary_arity;
+                const auto n_bits =  static_cast<std::size_t>(std::ceil(std::log2(derived.shape(i))));
+                num_binary_var[i] = n_bits;
+                binary_arity += n_bits;
             }
 
-            auto binary_tensor = std::make_unique<StaticNumLabelTensor<value_type, 2>>(new_arity);
+            // allocate the result binary tensor
+            auto binary_tensor = std::make_unique<StaticNumLabelTensor<value_type, 2>>(binary_arity);
+
+            // fill the binary tensor
+
+            // buffer to hold the labels for this tensor
+            arity_vector<std::size_t> labels(arity);
+
+            // buffer to hold the labels for the binary tensor
+            binary_arity_vector<std::size_t> binary_labels(binary_arity);
+
+
+            // iterate over all states of this tensor and translate
+            // the labels st we have also the "binarized labels"
+            detail::for_each_state(arity, shape, labels, [&](auto && lables){
+
+                // the value / energy of the tensor itself
+                // at the current label
+                const auto val =  derived[labels.data()];
+
+                // binarize the labels
+                for(auto i=0; i<arity; ++i)
+                {
+                    auto binary_labels_begin_ptr = binary_labels.data() + offset[i];
+                    detail::encode_binary(labels[i], binary_labels_begin_ptr, num_binary_var[i]);
+                }
+
+                // write the value of the tensor itself at the current label
+                // to the output tensor at the appropriate binary labels
+                binary_tensor->operator[](binary_labels.data()) =  val;
+            });
+
             return std::move(binary_tensor);
         }
 
@@ -394,12 +438,10 @@ namespace detail{
             return ARITY * 2;
         }
         T operator[](const label_type * labels)const override{
-            for(auto i=1; i<ARITY;++i){
-                if(labels[i] == 0){
-                    return 0.0;
-                }
+            if(std::any_of(labels, labels+ARITY, [](auto l){return l == 0;}))
+            {
+                return 0.0;
             }
-            // all labels are 1
             return m_beta;
         }
 
@@ -407,7 +449,7 @@ namespace detail{
             return ARITY;
         }
         std::size_t shape(const std::size_t) const override{
-            return ARITY;
+            return 2;
         }
     private:
         value_type m_beta;

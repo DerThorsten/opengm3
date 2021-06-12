@@ -353,11 +353,6 @@ public:
                 mean /= num_labels;
 
 
-                // // calculate the mean of the new message
-                // value_type min_val = (buffer[0] - fac_to_var[0]);
-                // for(label_type l=0; l<num_labels; ++l){
-                //     min_val = std::min(min_val, (buffer[l] - fac_to_var[l]));
-                // }
               
                 // substract the mean and damp
                 for(label_type l=0; l<num_labels; ++l){
@@ -365,8 +360,6 @@ public:
                     const value_type newUndampedValue = (buffer[l] - fac_to_var[l])- mean;
                     const value_type newDampedValue = m_settings.damping * oldValue + (1.0 - m_settings.damping)*newUndampedValue;
                     var_to_fac[l] = newDampedValue;
-
-                    //std::cout<<oldValue<<" "<<newUndampedValue<<"\n";
                     // convergence accumulation
                     const value_type diff = oldValue-newDampedValue;
                     msg_squared_diff += diff*diff;

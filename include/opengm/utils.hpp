@@ -1,11 +1,39 @@
 #pragma once
 
 
-#include "opengm/factors_of_variables.hpp"
-
 #include <set>
+#include <bitset>
+
+#include "opengm/opengm_config.hpp"
 
 namespace opengm::detail{
+
+    template<class OUTPUT>
+    inline void encode_binary(const label_type label, OUTPUT & out, std::size_t max_used_bits  = sizeof(label_type) * 8)
+    {
+        std::bitset<sizeof(label_type) * 8>  bits(label);
+        for(auto i=0; i<max_used_bits; ++i)
+        {
+            out[i] = static_cast<label_type>(bits[i]);
+        }
+    }
+
+    template<class INPUT>
+    inline label_type decode_binary(const INPUT & input, const std::size_t num_labels, std::size_t max_used_bits)
+    {
+        label_type out;
+        std::bitset<sizeof(label_type) * 8>  bits;
+        for(auto i=0; i<max_used_bits; ++i)
+        {
+            bits[i] = static_cast<bool>(input[i]);
+        }
+        out = reinterpret_cast<label_type>(bits);
+        if (out >= num_labels)
+        {
+            out = 0;
+        }
+        return out;
+    }
 
 
     inline int ipow(int base, int exponent)

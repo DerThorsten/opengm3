@@ -13,6 +13,7 @@ namespace opengm {
 
     using label_type = std::size_t;
     constexpr std::size_t small_vector_arity_size = 5;
+    constexpr std::size_t small_vector_binary_arity_size = 12;
 
 } // end namespace opengm
 
