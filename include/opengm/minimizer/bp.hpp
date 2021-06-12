@@ -29,7 +29,8 @@ namespace detail{
     public:
         typedef GM gm_type;
         using value_type = typename gm_type::value_type;
-        using factors_of_variables_type =  HigherOrderAndUnaryFactorsOfVariables<gm_type>;
+        //using factors_of_variables_type =  HigherOrderAndUnaryFactorsOfVariables<gm_type>;
+        using factors_of_variables_type =  FactorsOfVariables<gm_type>;
         MessageStoring(const gm_type & gm, const factors_of_variables_type & factors_of_variables)
         :   m_gm(gm),
             m_factors_of_variables(factors_of_variables),
@@ -43,10 +44,10 @@ namespace detail{
             // count messages
             for(auto && factor : m_gm){
                 const auto arity = factor.arity();
-                if(arity>1){
+                // if(arity>1){
                     num_fac_to_var_msg +=arity;
                     msg_value_space += factor.sum_of_shape();
-                }
+                //}
             }
 
             m_msg_storage.resize(2*msg_value_space,0.0);
@@ -60,7 +61,7 @@ namespace detail{
                 const auto nl = m_gm.num_labels(vi);
                 const auto & factors = m_factors_of_variables[vi];
                 m_var_to_fac_offset[vi] = msg_index;
-                for(auto fi : factors.higher_order()){
+                for(auto fi : factors){
                     const auto factor = m_gm[fi];
 
                     m_msg_ptrs.push_back(Msg<value_type>{m_msg_storage.data()+ var_offset , NULL});
@@ -71,7 +72,7 @@ namespace detail{
 
             m_gm.for_each_factor([&](auto fi, auto && factor){
                 const auto arity = factor.arity();
-                if(arity > 1){
+                //if(arity > 1){
 
                     auto && variables = factor.variables();
                     // set var_offset
@@ -80,11 +81,11 @@ namespace detail{
 
                         const auto vi = variables[a];
                         const auto nl = m_gm.num_labels(vi);
-                        auto && hfacs = m_factors_of_variables[vi].higher_order();
+                        auto && facs = m_factors_of_variables[vi];//.higher_order();
 
-                        // find out at which position fDesc is in hfacs
-                        auto fi_iter = std::find(hfacs.begin(), hfacs.end(), fi);
-                        const auto pos = std::distance(hfacs.begin(), fi_iter);
+                        // find out at which position fi is in facs
+                        auto fi_iter = std::find(facs.begin(), facs.end(), fi);
+                        const auto pos = std::distance(facs.begin(), fi_iter);
 
                         auto  & varToFacMsgHolder = m_msg_ptrs[m_var_to_fac_offset[vi]+pos];
 
@@ -95,7 +96,7 @@ namespace detail{
                     }
                     m_fac_to_var_offset[fi] = msg_index;
                     msg_index += arity;
-                }
+                //}
             });
         }
 
@@ -159,7 +160,7 @@ public:
 
     using gm_type = GM;
     using base_type = MinimizerBase<gm_type>;
-    using factors_of_variables_type =  HigherOrderAndUnaryFactorsOfVariables<gm_type>;
+    using factors_of_variables_type =  FactorsOfVariables<gm_type>;
     using value_type = typename GM::value_type;
     using label_type = typename GM::label_type;
     using labels_vector_type = typename base_type::labels_vector_type;
@@ -208,7 +209,8 @@ public:
         m_best_energy(),
         m_current_labels(gm.num_variables(), 0),
         m_best_labels(gm.num_variables(),0),
-        sMsgBuffer_(gm.space().max_num_labels())
+        sMsgBuffer_(gm.space().max_num_labels()),
+        m_iteration(0)
     {
         m_current_energy =  m_gm.evaluate(m_current_labels);
         m_best_energy = m_current_energy;
@@ -247,7 +249,7 @@ public:
         auto callback = callback_wrapper(this, minimizer_callback_base_ptr);
 
 
-        for(auto iteration=0; iteration<m_settings.num_iterations; ++iteration)
+        for(auto m_iteration=0; m_iteration<m_settings.num_iterations; ++m_iteration)
         {
             this->sendAllFacToVar();
             auto eps = this->sendAllVarToFac();
@@ -288,14 +290,20 @@ public:
     void sendFacToVar(const std::size_t fi){
         auto && factor = m_gm[fi];
         const auto arity  = factor.arity();
-
-        arity_vector<value_type *>       facToVar(arity);
-        arity_vector<const value_type *> varToFac(arity);
-        for(auto i=0; i<arity; ++i){
-            facToVar[i] = m_msg.facToVarMsg(fi, i);
-            varToFac[i] = m_msg.oppToFacToVarMsg(fi, i);
+        if(arity >=2){
+            arity_vector<value_type *>       facToVar(arity);
+            arity_vector<const value_type *> varToFac(arity);
+            for(auto i=0; i<arity; ++i){
+                facToVar[i] = m_msg.facToVarMsg(fi, i);
+                varToFac[i] = m_msg.oppToFacToVarMsg(fi, i);
+            }
+            factor.factor_to_variable_messages(varToFac.data(), facToVar.data());
         }
-        factor.factor_to_variable_messages(varToFac.data(), facToVar.data());
+        // else if(m_iteration == 0)
+        // {
+        //     auto facToVar =  m_msg.facToVarMsg(fi, 0);
+        //     factor.copy_corder(facToVar);
+        // }
     }
 
 
@@ -309,27 +317,28 @@ public:
         const auto num_labels = m_gm.num_labels(vi);
 
         // factors for this variable
-        auto && unaries = m_factors_of_variables[vi].unaries();
-        auto && higher_order = m_factors_of_variables[vi].higher_order();
-
-        if(unaries.size() + higher_order.size() > 0)
+        auto && factors = m_factors_of_variables[vi];
+        if(factors.size() > 0)
         {
             // initialize buffer
             std::fill(buffer, buffer + num_labels, 0.0);
 
-            // add unaries to buffer
-            for(auto fi : unaries)
+            for(auto fi : factors)
             {
-                m_gm[fi].add_values(buffer);
-            }
-
-            // higher order factors
-            for(auto hoi=0; hoi<higher_order.size(); ++hoi)
-            {
-                const auto fac_to_var = m_msg.oppToVarToFacMsg(vi, hoi);
-                for(label_type l=0; l<num_labels; ++l)
+                const auto arity = m_gm[fi].arity();
+                // add unaries to buffer
+                if(arity == 1)
                 {
-                    buffer[l] +=fac_to_var[l];
+                    m_gm[fi].add_values(buffer);
+                }
+
+                else if(arity >= 2)
+                {
+                    const auto fac_to_var = m_msg.oppToVarToFacMsg(vi, fi);
+                    for(label_type l=0; l<num_labels; ++l)
+                    {
+                        buffer[l] +=fac_to_var[l];
+                    }
                 }
             }
 
@@ -341,10 +350,11 @@ public:
             // compute outgoing messages
             // - we subtract a single varToFac msg 
             //   from belief vector 
-            for(size_t hoi=0; hoi<higher_order.size(); ++hoi){
+            for(size_t fi=0; fi<factors.size(); ++fi){
+
                 // get the factor msg
-                const auto fac_to_var = m_msg.oppToVarToFacMsg(vi,hoi);
-                auto var_to_fac = m_msg.varToFacMsg(vi,hoi);
+                const auto fac_to_var = m_msg.oppToVarToFacMsg(vi,fi);
+                auto var_to_fac = m_msg.varToFacMsg(vi,fi);
 
                 // calculate the mean of the new message
                 value_type mean = 0.0;
@@ -382,8 +392,8 @@ private:
     value_type m_best_energy;
     labels_vector_type m_current_labels;
     labels_vector_type m_best_labels;
-    std::vector<value_type> sMsgBuffer_;
-
+    std::vector<value_type> sMsgBuffer_;    
+    std::size_t m_iteration;
 
 };
 

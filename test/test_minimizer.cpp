@@ -89,8 +89,9 @@ TEST_CASE("BeliefPropergation"){
         using gm_type = std::decay_t<decltype(gm)>;
         using minimizer_type = opengm::BeliefPropergation<gm_type>;
         typename minimizer_type::settings_type settings;
-        settings.damping = 0.5;
-        settings.num_iterations = 100;
+        settings.damping = 0.999;
+        settings.num_iterations = 1000;
+        settings.convergence = 1e-8;
         return minimizer_type(gm, settings);
     };
     {
@@ -102,8 +103,8 @@ TEST_CASE("BeliefPropergation"){
     }
     {
         auto n_variables = 6;
-        auto n_labels =  4;
-        opengm::testing(opengm::RandomPottsChain(n_variables, n_labels), factory, cond::NoCondition(), 10);
+        auto n_labels =  2;
+        opengm::testing(opengm::RandomPottsChain(n_variables, n_labels), factory, cond::Optimal(), 100);
     }
 }
 

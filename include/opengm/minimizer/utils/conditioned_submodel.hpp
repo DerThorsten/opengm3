@@ -163,7 +163,9 @@ namespace detail
         template<class VI_ITER, class F>
         void condition(VI_ITER free_vi_begin, VI_ITER free_vi_end, const labels_vector_type &  labels, F && f)
         {
-            sub_gm_type sub_gm(m_gm.space().subspace(free_vi_begin, free_vi_end));
+            auto subspace = m_gm.space().subspace(free_vi_begin, free_vi_end);
+            //std::cout<<"subspace "<<subspace.size()<<" at 0 "<<subspace[0]<<"\n";
+            sub_gm_type sub_gm(subspace);
             m_sub_num_variables = sub_gm.num_variables();
 
             auto svi = 0;
@@ -210,7 +212,7 @@ namespace detail
                         m_sub_gm_factor_vi.begin() + sub_arity
                     );
                 }
-                else if(sub_arity > 0)
+                else if(sub_arity == factor.arity())
                 {
                     auto tensor = factor.tensor();
                     sub_gm.add_factor(
@@ -219,6 +221,13 @@ namespace detail
                         m_sub_gm_factor_vi.begin() + sub_arity
                     );
                 }
+                // else // exlucded
+                // {
+                //     std::cout<<"arity "<<factor.arity()<<"\n";
+                //     std::cout<<"sub_arity "<<sub_arity<<"\n";
+                //     std::cout<<"n_fixed "<<n_fixed<<"\n";
+                //     throw std::runtime_error("hups");
+                // }
 
             }
             f(sub_gm);

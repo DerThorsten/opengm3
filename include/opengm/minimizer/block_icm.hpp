@@ -9,7 +9,8 @@
 #include "opengm/from_gm_factory.hpp"
 
 #include "opengm/minimizer/factor_icm.hpp"
-
+#include "opengm/minimizer/icm.hpp"
+#include "opengm/minimizer/brute_force_naive.hpp"
 
 namespace opengm{
 
@@ -122,6 +123,10 @@ public:
         {
             m_settings.block_generator_factory = std::make_shared<BlockGeneratorFactory<SingleVarBlockGenerator<gm_type>>>();
         }
+        if(! m_settings.minimizer_factory )
+        {
+            m_settings.minimizer_factory = std::make_shared<MinimizerFactory<BruteForceNaive<sub_gm_type>>>();
+        }
     }
 
     std::string name() const override{
@@ -157,7 +162,15 @@ public:
         auto callback = callback_wrapper(this, minimizer_callback_base_ptr);
 
         auto block_gen = m_settings.block_generator_factory->create(m_gm);
-        while(block_gen->generate(this)){
+        while(true){
+
+            std::cout<<"gen\n";
+            bool continue_gen = block_gen->generate(this);
+            std::cout<<"done\n";
+            if(!continue_gen)
+            {
+                break;
+            }
         }
         m_energy = m_gm.evaluate(m_labels);
 
@@ -167,8 +180,19 @@ public:
     bool solve_submodel(VI_ITER free_vi_begin, VI_ITER free_vi_end)
     {
         std::cout<<"solve the submodel\n";
-        m_builder.condition(free_vi_begin, free_vi_end, m_labels, [](auto && sub_gm){
 
+        std::cout<<"condition\n";
+        m_builder.condition(free_vi_begin, free_vi_end, m_labels, [&](auto && sub_gm){
+            // solver the sub_gm
+
+            std::cout<<"sub_gm "<<sub_gm.num_variables()<<" "<<sub_gm.num_factors()<<"\n";
+            std::cout<<"create sub_gm_minimizer\n";
+            auto sub_gm_minimizer = m_settings.minimizer_factory->create(sub_gm);
+            std::cout<<"minimize\n";
+            sub_gm_minimizer->minimize();
+
+            std::cout<<"get best\n";
+            auto && sub_gm_labels = sub_gm_minimizer->best_labels();
         });
         return false;
     }

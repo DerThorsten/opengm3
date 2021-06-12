@@ -183,7 +183,7 @@ namespace opengm {
             self_type ret(std::distance(begin, end));
             auto i=0;
             while(begin != end){
-                ret.m_space[i] = *begin;
+                ret.m_space[i] = m_space[*begin];
                 ++begin;
             }
             return ret;
