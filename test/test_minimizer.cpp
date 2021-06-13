@@ -104,7 +104,7 @@ TEST_CASE("BeliefPropergation"){
     {
         auto n_variables = 6;
         auto n_labels =  2;
-        opengm::testing(opengm::RandomPottsChain(n_variables, n_labels), factory, cond::Optimal(), 100);
+        opengm::testing(opengm::RandomPottsChain(n_variables, n_labels), factory, cond::NoCondition(), 100);
     }
 }
 

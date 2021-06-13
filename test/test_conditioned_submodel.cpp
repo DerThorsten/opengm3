@@ -40,7 +40,7 @@ TEST_CASE("ConditionedSubmodel"){
 
     labels_vector_type labels(gm.num_variables(), 1);
 
-    conditioned_submodel_builder.condition({0}, labels, [&](auto && sub_gm){
+    conditioned_submodel_builder.condition({0}, labels, [&](auto && sub_gm, auto && sub_gm_lables){
         CHECK_EQ(sub_gm.num_variables(), 1);
         for(auto && factor : sub_gm)
         {
@@ -87,7 +87,7 @@ TEST_CASE("ConditionedSubmodel2"){
 
         labels_vector_type labels(gm.num_variables(), 1);
 
-        conditioned_submodel_builder.condition({0}, labels, [&](auto && sub_gm){
+        conditioned_submodel_builder.condition({0}, labels, [&](auto && sub_gm, auto && sub_gm_lables){
             using sub_gm_type = std::decay_t<decltype(sub_gm)>;
             CHECK_EQ(sub_gm.num_variables(), 1);
             for(auto && factor : sub_gm)

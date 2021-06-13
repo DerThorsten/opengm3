@@ -142,6 +142,7 @@ namespace detail
             m_is_free(m_gm.num_variables(), false),
             m_gm_to_sub_gm(m_gm.num_variables()),
             m_sub_gm_to_gm(m_gm.num_variables()),
+            m_sub_gm_labels(m_gm.num_variables()),
             m_factor_fixed_pos(),
             m_factor_fixed_labels()
         {
@@ -168,11 +169,14 @@ namespace detail
             sub_gm_type sub_gm(subspace);
             m_sub_num_variables = sub_gm.num_variables();
 
+
             auto svi = 0;
             std::for_each(free_vi_begin, free_vi_end, [&](auto vi){
                 m_is_free[vi]=true;
                 m_gm_to_sub_gm[vi] = svi;
                 m_sub_gm_to_gm[svi] = vi;
+                m_sub_gm_labels[svi] =  labels[vi];
+
                 ++svi;
             });
 
@@ -230,7 +234,7 @@ namespace detail
                 // }
 
             }
-            f(sub_gm);
+            f(sub_gm, m_sub_gm_labels.data());
             // cleanup
             for(auto svi=0; svi<m_sub_num_variables; ++svi)
             {
@@ -238,6 +242,14 @@ namespace detail
             }
         }
 
+        const auto & gm_to_sub_gm()const
+        {
+            return m_gm_to_sub_gm;
+        }
+        const auto & sub_gm_to_gm()const
+        {
+            return m_sub_gm_to_gm;
+        }
     private:
 
         const gm_type & m_gm;
@@ -245,6 +257,7 @@ namespace detail
         std::vector<bool> m_is_free;
         std::vector<std::size_t> m_gm_to_sub_gm;
         std::vector<std::size_t> m_sub_gm_to_gm;
+        std::vector<label_type>  m_sub_gm_labels;
         std::vector<std::size_t> m_sub_gm_factor_vi;
         std::vector<std::size_t> m_factor_fixed_pos;
         std::vector<label_type>  m_factor_fixed_labels;

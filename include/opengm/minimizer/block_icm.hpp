@@ -64,7 +64,7 @@ public:
     bool generate(block_icm_type * block_icm) override
     {
         std::size_t some_var = 0;
-        bool improved = block_icm->solve_submodel(&some_var, &some_var+1);
+        auto improvment  = block_icm->solve_submodel(&some_var, &some_var+1);
         return false;
     }
 private:
@@ -163,10 +163,14 @@ public:
 
         auto block_gen = m_settings.block_generator_factory->create(m_gm);
         while(true){
+            auto continue_gen = block_gen->generate(this);
+            // call the callback if solving the the submodel
+            // improved the overall energy
+            if(m_improvment)
+            {
+                callback();
+            }
 
-            std::cout<<"gen\n";
-            bool continue_gen = block_gen->generate(this);
-            std::cout<<"done\n";
             if(!continue_gen)
             {
                 break;
@@ -177,14 +181,13 @@ public:
     }
 
     template<class VI_ITER>
-    bool solve_submodel(VI_ITER free_vi_begin, VI_ITER free_vi_end)
+    auto solve_submodel(VI_ITER free_vi_begin, VI_ITER free_vi_end)
     {
-        std::cout<<"solve the submodel\n";
+        m_improvment = false;
+        auto delta = value_type(0);
+        m_builder.condition(free_vi_begin, free_vi_end, m_labels, [&](auto && sub_gm, auto && current_sub_gm_labels){
 
-        std::cout<<"condition\n";
-        m_builder.condition(free_vi_begin, free_vi_end, m_labels, [&](auto && sub_gm){
             // solver the sub_gm
-
             std::cout<<"sub_gm "<<sub_gm.num_variables()<<" "<<sub_gm.num_factors()<<"\n";
             std::cout<<"create sub_gm_minimizer\n";
             auto sub_gm_minimizer = m_settings.minimizer_factory->create(sub_gm);
@@ -192,9 +195,26 @@ public:
             sub_gm_minimizer->minimize();
 
             std::cout<<"get best\n";
-            auto && sub_gm_labels = sub_gm_minimizer->best_labels();
+            const auto & sub_gm_labels = sub_gm_minimizer->best_labels();
+            const auto & sub_gm_energy = sub_gm_minimizer->best_energy();
+            const auto old_sub_energy  = sub_gm.evaluate(current_sub_gm_labels, current_sub_gm_labels+sub_gm.num_variables());
+            delta = old_sub_energy - sub_gm_energy;
+            if(delta > value_type(0))
+            {
+                m_improvment = true;
+
+                for(auto sub_gm_vi=0; sub_gm_vi<sub_gm.num_variables(); ++sub_gm_vi)
+                {
+                    m_labels[m_builder.sub_gm_to_gm()[sub_gm_vi]] = sub_gm_labels[sub_gm_vi];
+                }
+            }
+
         });
-        return false;
+        if(m_improvment)
+        {
+            m_energy -= delta;
+        }
+        return m_improvment;
     }
 private:
 
@@ -204,6 +224,7 @@ private:
     std::vector<label_type> m_labels;
     value_type m_energy;
     conditioned_submodel_builder_type m_builder;
+    bool m_improvment;
 };
 
 template<class GM>
