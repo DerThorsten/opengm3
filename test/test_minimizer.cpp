@@ -89,7 +89,7 @@ TEST_CASE("BeliefPropergation"){
         using gm_type = std::decay_t<decltype(gm)>;
         using minimizer_type = opengm::BeliefPropergation<gm_type>;
         typename minimizer_type::settings_type settings;
-        settings.damping = 0.999;
+        settings.damping = 0.9;
         settings.num_iterations = 1000;
         settings.convergence = 1e-8;
         return minimizer_type(gm, settings);

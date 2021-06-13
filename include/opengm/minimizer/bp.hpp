@@ -368,7 +368,7 @@ public:
                 // substract the mean and damp
                 for(label_type l=0; l<num_labels; ++l){
                     const value_type oldValue = var_to_fac[l];
-                    const value_type newUndampedValue = (buffer[l] - fac_to_var[l])- mean;
+                    const value_type newUndampedValue = (buffer[l] - fac_to_var[l]);//- mean;
                     const value_type newDampedValue = m_settings.damping * oldValue + (1.0 - m_settings.damping)*newUndampedValue;
                     var_to_fac[l] = newDampedValue;
                     // convergence accumulation
