@@ -1,6 +1,6 @@
 #pragma once
 
-#include <queue>
+
 #include <algorithm>
 
 #include "opengm/minimizer/utils/conditioned_submodel.hpp"
@@ -13,6 +13,9 @@
 #include "opengm/minimizer/brute_force_naive.hpp"
 
 namespace opengm{
+
+
+
 
 template<class GM>
 class BlockIcm;
@@ -71,6 +74,39 @@ private:
     const gm_type & m_gm;
     settings_type m_settings;
 };
+
+
+
+
+template<class GM>
+class BfsVarBlockGenerator : public BlockGeneratorBase<GM>
+{
+public:
+    using gm_type = GM;
+    using block_icm_type = BlockIcm<GM>;
+    using variables_set_type = std::set<std::size_t>;
+
+    struct settings_type {
+    };
+
+    BfsVarBlockGenerator(const gm_type & gm, const settings_type settings = settings_type())
+    :   m_gm(gm),
+        m_settings(settings)
+    {
+
+    }
+
+    bool generate(block_icm_type * block_icm) override
+    {
+        std::size_t some_var = 0;
+        auto improvment  = block_icm->solve_submodel(&some_var, &some_var+1);
+        return false;
+    }
+private:
+    const gm_type & m_gm;
+    settings_type m_settings;
+};
+
 
 
 
